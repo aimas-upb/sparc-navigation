@@ -1,5 +1,5 @@
 import cv2
-
+print("ceva")
 robotPosition = (-1,-1)
 initialImage = cv2.imread("C:\\Users\\AlexandruGAVRIL\\build-SparcNavigation-Desktop_Qt_5_7_1_MSVC2015_64bit-Release\\release\\mergeee.map.png", 0)
 image = cv2.imread("C:\\Users\\AlexandruGAVRIL\\build-SparcNavigation-Desktop_Qt_5_7_1_MSVC2015_64bit-Release\\release\\mergeee.map.png", 0)
