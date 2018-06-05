@@ -23,6 +23,8 @@ class PepperNavigation:
         self.listener =  tf.TransformListener()
         self.move_publisher = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=10)
 
+
+
     def move_to_goal(self, goal):
         self.move_publisher.publish(goal)
 
