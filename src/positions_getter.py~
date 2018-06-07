@@ -1,0 +1,103 @@
+import socket
+import sys
+import pickle
+import numpy as np
+import collections
+
+from PepperLocalization import PepperNavigation
+import roslib
+import rospy
+import actionlib
+from actionlib_msgs.msg import *
+from geometry_msgs.msg import Pose, PoseWithCovarianceStamped, Point, Quaternion, Twist, PoseStamped
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from nav_msgs.msg import Path
+from std_msgs.msg import String
+
+IP = "192.168.0.158"
+PORT = 3000
+BUFFER_SIZE = 10000
+
+class TcpClient:
+	def __init__(self):
+		self.ip = IP
+		self.port = PORT
+		self.path = []
+		self.path_pub = rospy.Publisher("/human_path", Path, queue_size=100)
+		rospy.init_node('talker', anonymous=True)
+		self.opened_connection = True
+		self.navigation = PepperNavigation()
+	
+	def connect(self):
+		self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		try:
+			self.socket.connect((self.ip, self.port))
+			print("Connected to server.")
+		except:
+			print("Connection failed.")
+			sys.exit(0)
+
+	def get_data(self):
+		try:
+			while True:
+				data = pickle.loads(self.socket.recv(BUFFER_SIZE))
+				self.parse_data(data)
+
+		except KeyboardInterrupt:
+			print("Script interrupted by user, shutting down.")
+
+		except Exception as e:
+			print("Exception: " + str(e))
+
+		finally:
+			self.socket.close()
+
+	def publish_path(self):
+		pose_list = list()
+		#path to send the Rviz
+		my_path = Path()
+		#my_path.header.stamp = rospy.Time.now()
+		my_path.header.frame_id = 'map'
+
+		#make the poses into posestamped
+		
+		for position in self.path:
+			loc = Pose()
+			pose = PoseStamped()
+			map_origin = self.navigation.map.info.origin.position
+			robot_pos = self.navigation.get_pose().pose
+			loc.position.x = position[0] + robot_pos.position.x
+			loc.position.y = position[1] + robot_pos.position.y
+			loc.position.z = position[2] + robot_pos.position.z
+			loc.orientation.x = robot_pos.orientation.x
+			pose.header.frame_id = 'map'
+			pose.pose = loc
+
+			# pose.header.frame_id = '/odom'
+			# pose.header.stamp = rospy.Time.now()
+			
+			my_path.poses.append(pose)
+
+
+		self.path_pub.publish(my_path)
+
+
+	def parse_data(self, data):
+		if not data or len(data) == 0:
+			return
+
+		for person in data:
+			print("Person: " + str(person[0]))
+			print("\tx: " + str(person[1][0]))
+			print("\ty: " + str(person[1][1]))
+			print("\tz: " + str(person[1][2]))
+			self.path.append(person[1])
+		if len(self.path) > 2:
+			self.publish_path()
+
+
+if __name__ == "__main__":
+	client = TcpClient()
+	
+	client.connect()
+	client.get_data()
